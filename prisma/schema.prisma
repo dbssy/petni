@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  email     String   @unique
+  password  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Customer {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  phone     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pets     Pet[]
+  services Service[]
+
+  @@map("customers")
+}
+
+model Pet {
+  id         String @id @default(uuid()) @db.Uuid
+  customerId String @map("customer_id") @db.Uuid
+  name       String
+  age        Int
+  species    String
+  breed      String
+  gender     String
+
+  services Service[]
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("pets")
+}
+
+enum PaymentMethodType {
+  CREDIT_CARD
+  DEBIT_CARD
+  PIX
+  MONEY
+  ANOTHER
+
+  @@map("payment_method_type")
+}
+
+enum PaymentType {
+  INCOME
+  EXPENSE
+
+  @@map("payment_type")
+}
+
+enum PaymentStatus {
+  AWAITING_PAYMENT
+  PAID
+}
+
+model Payment {
+  id         String            @id @default(uuid()) @db.Uuid
+  name       String?
+  value      Float             @default(0)
+  methodType PaymentMethodType @default(PIX) @map("payment_type")
+  type       PaymentType       @default(INCOME)
+  status     PaymentStatus     @default(AWAITING_PAYMENT) @map("payment_status")
+  paidAt     DateTime?         @map("paid_at")
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  services Service[] @relation("service_payments")
+
+  @@map("payments")
+}
+
+model ServiceType {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  price     Float     @default(0)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  service Service[]
+
+  @@map("service_types")
+}
+
+enum ServiceStatus {
+  WAITING
+  IN_PROGRESS
+  DONE
+  CANCELED
+
+  @@map("service_status")
+}
+
+model Service {
+  id            String        @id @default(uuid()) @db.Uuid
+  orderId       Int           @unique @default(autoincrement())
+  customerId    String        @map("customer_id") @db.Uuid
+  petId         String        @map("pet_id") @db.Uuid
+  serviceTypeId String        @map("service_type_id") @db.Uuid
+  status        ServiceStatus @default(WAITING)
+  startAt       DateTime      @default(now()) @map("start_at")
+  endAt         DateTime?     @map("end_at")
+  duration      Int?
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  payments Payment[] @relation("service_payments")
+
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  pet         Pet         @relation(fields: [petId], references: [id], onDelete: Cascade)
+  serviceType ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+
+  @@map("services")
+}
